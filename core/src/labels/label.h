@@ -76,11 +76,13 @@ public:
 
         // the label hash based on its styling parameters
         size_t paramHash = 0;
+        bool required = false;
     };
 
     static const float activation_distance_threshold;
 
-    Label(Transform _transform, glm::vec2 _size, Type _type, Options _options, LabelProperty::Anchor _anchor);
+    Label(Transform _transform, glm::vec2 _size, Type _type, Options _options,
+          LabelProperty::Anchor _anchor);
 
     virtual ~Label();
 
@@ -123,8 +125,8 @@ public:
     bool isOccluded() const { return m_occluded; }
     bool occludedLastFrame() const { return m_occludedLastFrame; }
 
-    const Label* parent() const { return m_parent; }
-    void setParent(const Label& parent, bool definePriority);
+    Label* parent() const { return m_parent; }
+    void setParent(Label& parent, bool definePriority);
 
     LabelProperty::Anchor anchorType() const { return m_anchorType; }
 
@@ -133,6 +135,7 @@ public:
     void enterState(const State& _state, float _alpha = 1.0f);
 
     Type type() const { return m_type; }
+
 private:
 
     virtual void applyAnchor(const glm::vec2& _dimension, const glm::vec2& _origin,
@@ -167,7 +170,7 @@ protected:
     LabelProperty::Anchor m_anchorType;
     glm::vec2 m_anchor;
 
-    const Label* m_parent;
+    Label* m_parent;
 
 };
 

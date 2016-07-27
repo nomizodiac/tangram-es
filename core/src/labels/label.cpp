@@ -8,7 +8,8 @@ namespace Tangram {
 
 const float Label::activation_distance_threshold = 2;
 
-Label::Label(Label::Transform _transform, glm::vec2 _size, Type _type, Options _options, LabelProperty::Anchor _anchor)
+Label::Label(Label::Transform _transform, glm::vec2 _size, Type _type,
+             Options _options, LabelProperty::Anchor _anchor)
     : m_type(_type),
       m_transform(_transform),
       m_dim(_size),
@@ -16,7 +17,8 @@ Label::Label(Label::Transform _transform, glm::vec2 _size, Type _type, Options _
       m_anchorType(_anchor) {
 
     m_state = State::wait_occ;
-    if (!m_options.collide || m_type == Type::debug){
+
+    if (!m_options.collide || m_type == Type::debug) {
         enterState(State::visible, 1.0);
     } else {
         m_transform.state.alpha = 0.0;
@@ -99,7 +101,7 @@ bool Label::updateScreenTransform(const glm::mat4& _mvp, const glm::vec2& _scree
     return true;
 }
 
-void Label::setParent(const Label& _parent, bool _definePriority) {
+void Label::setParent(Label& _parent, bool _definePriority) {
     m_parent = &_parent;
 
     glm::vec2 anchorDir = LabelProperty::anchorDirection(_parent.anchorType());
