@@ -245,10 +245,17 @@ void Labels::handleOcclusions() {
                 auto* l2 = static_cast<Label*>(b.m_userData);
 
                 if (intersect(l1->obb(), l2->obb())) {
+                    // At this point, the label has a parent that is visible,
+                    // if it is a required label, turn the parent to occluded
+                    if (l1->parent() && l1->options().required) {
+                        l1->parent()->occlude();
+                    }
+
                     l1->occlude();
                     // Drop label
                     return false;
                 }
+
                 // Continue
                 return true;
             });
