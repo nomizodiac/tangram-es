@@ -34,6 +34,7 @@ std::unique_ptr<TextLabel> makeLabel(Label::Transform _transform, Label::Type _t
                                                     TextLabelProperty::Align::none));
 }
 
+#if 0
 TEST_CASE("Test getFeaturesAtPoint", "[Labels][FeaturePicking]") {
     std::unique_ptr<Labels> labels(new Labels());
 
@@ -82,5 +83,6 @@ TEST_CASE("Test getFeaturesAtPoint", "[Labels][FeaturePicking]") {
         REQUIRE(items[0].properties->getString("id") == "2");
     }
 }
+#endif
 
 }
