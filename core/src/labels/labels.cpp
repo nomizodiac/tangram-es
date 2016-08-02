@@ -21,7 +21,7 @@
 namespace Tangram {
 
 Labels::Labels()
-    : m_needUpdate(Label::EvalUpdate::none),
+    : m_needUpdate(false),
       m_lastZoom(0.0f) {}
 
 Labels::~Labels() {}
@@ -29,14 +29,6 @@ Labels::~Labels() {}
 // int Labels::LODDiscardFunc(float _maxZoom, float _zoom) {
 //     return (int) MIN(floor(((log(-_zoom + (_maxZoom + 2)) / log(_maxZoom + 2) * (_maxZoom )) * 0.5)), MAX_LOD);
 // }
-
-void Labels::evalLabel(Label* _label, float _dt) {
-    auto update = _label->evalState(_dt);
-    if (update == Label::EvalUpdate::relayout ||
-        m_needUpdate == Label::EvalUpdate::none) {
-        m_needUpdate = update;
-    }
-}
 
 void Labels::updateLabels(const View& _view, float _dt,
                           const std::vector<std::unique_ptr<Style>>& _styles,
@@ -46,7 +38,7 @@ void Labels::updateLabels(const View& _view, float _dt,
     // Keep labels for debugDraw
     if (!_onlyTransitions) { m_labels.clear(); }
 
-    m_needUpdate = Label::EvalUpdate::none;
+    m_needUpdate = false;
 
     glm::vec2 screenSize = glm::vec2(_view.getWidth(), _view.getHeight());
 
@@ -82,13 +74,13 @@ void Labels::updateLabels(const View& _view, float _dt,
                     if (!label->canOcclude() || label->visibleState()) {
                         if (label->occludedLastFrame()) { label->occlude(); }
 
-                        evalLabel(label.get(), _dt);
+                        m_needUpdate |= label->evalState(_dt);
                         label->pushTransform();
                     }
                 } else if (label->canOcclude()) {
-                    m_labels.emplace_back(label.get(), proxyTile);
+                    m_labels.emplace_back(label.get(), tile.get(), proxyTile);
                 } else {
-                    evalLabel(label.get(), _dt);
+                    m_needUpdate |= label->evalState(_dt);
                     label->pushTransform();
                 }
             }
@@ -222,7 +214,9 @@ void Labels::sortLabels() {
     std::sort(m_labels.begin(), m_labels.end(), Labels::labelComparator);
 }
 
-void Labels::handleOcclusions() {
+void Labels::handleOcclusions(const View& _view) {
+
+    glm::vec2 screenSize = glm::vec2(_view.getWidth(), _view.getHeight());
 
     m_isect2d.clear();
     m_repeatGroups.clear();
@@ -246,22 +240,56 @@ void Labels::handleOcclusions() {
             }
         }
 
-        // Skip label if it intersects with a previous label.
-        auto aabb = l->aabb();
-        aabb.m_userData = static_cast<void*>(l);
+        //bool occluded = false;
+        int anchorIndex = l->anchorIndex();
+        glm::mat4 mvp = _view.getViewProjectionMatrix() * entry.tile->getModelMatrix();
 
-        m_isect2d.intersect(aabb, [](auto& a, auto& b) {
-                auto* l1 = static_cast<Label*>(a.m_userData);
-                auto* l2 = static_cast<Label*>(b.m_userData);
+        while (!l->isOccluded()) {
 
-                if (intersect(l1->obb(), l2->obb())) {
-                    l1->occlude();
-                    // Drop label
-                    return false;
+            // Skip label if it intersects with a previous label.
+            auto aabb = l->aabb();
+            aabb.m_userData = static_cast<void*>(l);
+
+            m_isect2d.intersect(aabb, [](auto& a, auto& b) {
+                    auto* l1 = static_cast<Label*>(a.m_userData);
+                    auto* l2 = static_cast<Label*>(b.m_userData);
+                    // Parents do not occlude their child
+                    if (l1->parent() == l2) {
+                        return true;
+                    }
+
+                    if (intersect(l1->obb(), l2->obb())) {
+                        l1->occlude();
+                        // Drop label
+                        return false;
+                    }
+                    // Continue
+                    return true;
+                });
+
+            if (!l->isOccluded()) { break; }
+            //if (!l->visibleState()) { break; }
+
+            // Try next anchor
+            while (l->isOccluded() && l->nextAnchor()) {
+
+                if (l->updateScreenTransform(mvp, screenSize, false)) {
+                    if (!l->offViewport(screenSize)) {
+                        l->occlude(false);
+                        l->updateBBoxes(0);
+                        break;
+                    }
                 }
-                // Continue
-                return true;
-            });
+            }
+        }
+
+        if (anchorIndex != l->anchorIndex() &&
+            l->isOccluded() && l->visibleState()) {
+            // Reset to original position for fade-out
+            l->setAnchorIndex(anchorIndex);
+            l->updateScreenTransform(mvp, screenSize, false);
+            l->updateBBoxes(0);
+        }
 
         if (l->options().repeatDistance > 0.f) {
             m_repeatGroups[l->options().repeatGroup].push_back(l);
@@ -304,14 +332,14 @@ void Labels::updateLabelSet(const View& _view, float _dt,
     m_isect2d.resize({_view.getWidth() / 256, _view.getHeight() / 256},
                      {_view.getWidth(), _view.getHeight()});
 
-    handleOcclusions();
+    handleOcclusions(_view);
 
     /// Update label meshes
 
     for (auto& entry : m_labels) {
         Label* label = entry.label;
 
-        evalLabel(label, _dt);
+        m_needUpdate |= label->evalState(_dt);
         label->pushTransform();
     }
 }
