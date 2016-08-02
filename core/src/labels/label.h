@@ -87,7 +87,7 @@ public:
 
     bool update(const glm::mat4& _mvp, const glm::vec2& _screenSize, float _zoomFract, bool _drawAllLabels = false);
 
-    bool nextAnchor();
+    void nextAnchor();
     bool setAnchorIndex(int _index);
     int anchorIndex() { return m_anchorIndex; }
 

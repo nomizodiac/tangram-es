@@ -210,23 +210,12 @@ void Label::print() const {
     //LOG("\tm_options.anchorFallback: %s", m_options.anchorFallbacks.to_string().c_str());
 }
 
-bool Label::nextAnchor() {
-    if (m_anchorIndex >= int(m_options.anchors.count)-1) {
-        return false;
-    }
-    m_anchorIndex++;
-
-    if (m_parent) {
-        alignFromParent(*m_parent);
-    } else {
-        applyAnchor(m_dim, glm::vec2(0.0), m_options.anchors[m_anchorIndex]);
-    }
-
-    return true;
+void Label::nextAnchor() {
+    setAnchorIndex((m_anchorIndex + 1) % m_options.anchors.count);
 }
 
 bool Label::setAnchorIndex(int _index) {
-    if (_index >= int(m_options.anchors.count)-1 || _index < 0) {
+    if (_index >= int(m_options.anchors.count) || _index < 0) {
         return false;
     }
     m_anchorIndex = _index;

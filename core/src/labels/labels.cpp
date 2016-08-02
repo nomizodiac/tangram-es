@@ -267,10 +267,10 @@ void Labels::handleOcclusions(const View& _view) {
                 });
 
             if (!l->isOccluded()) { break; }
-            //if (!l->visibleState()) { break; }
 
             // Try next anchor
-            while (l->isOccluded() && l->nextAnchor()) {
+            l->nextAnchor();
+            while (l->isOccluded() && anchorIndex != l->anchorIndex()) {
 
                 if (l->updateScreenTransform(entry.tile->mvp(), screenSize, false)) {
                     if (!l->offViewport(screenSize)) {
@@ -279,6 +279,7 @@ void Labels::handleOcclusions(const View& _view) {
                         break;
                     }
                 }
+                l->nextAnchor();
             }
         }
 
