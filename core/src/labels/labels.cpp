@@ -56,7 +56,7 @@ void Labels::updateLabels(const View& _view, float _dt,
 
         bool proxyTile = tile->isProxy();
 
-        glm::mat4 mvp = _view.getViewProjectionMatrix() * tile->getModelMatrix();
+        glm::mat4 mvp = tile->mvp();
 
         for (const auto& style : _styles) {
             const auto& mesh = tile->getMesh(*style);
@@ -242,7 +242,6 @@ void Labels::handleOcclusions(const View& _view) {
 
         //bool occluded = false;
         int anchorIndex = l->anchorIndex();
-        glm::mat4 mvp = _view.getViewProjectionMatrix() * entry.tile->getModelMatrix();
 
         while (!l->isOccluded()) {
 
@@ -273,7 +272,7 @@ void Labels::handleOcclusions(const View& _view) {
             // Try next anchor
             while (l->isOccluded() && l->nextAnchor()) {
 
-                if (l->updateScreenTransform(mvp, screenSize, false)) {
+                if (l->updateScreenTransform(entry.tile->mvp(), screenSize, false)) {
                     if (!l->offViewport(screenSize)) {
                         l->occlude(false);
                         l->updateBBoxes(0);
@@ -287,7 +286,7 @@ void Labels::handleOcclusions(const View& _view) {
             l->isOccluded() && l->visibleState()) {
             // Reset to original position for fade-out
             l->setAnchorIndex(anchorIndex);
-            l->updateScreenTransform(mvp, screenSize, false);
+            l->updateScreenTransform(entry.tile->mvp(), screenSize, false);
             l->updateBBoxes(0);
         }
 
@@ -363,7 +362,7 @@ const std::vector<TouchItem>& Labels::getFeaturesAtPoint(const View& _view, floa
 
     for (const auto& tile : _tiles) {
 
-        glm::mat4 mvp = _view.getViewProjectionMatrix() * tile->getModelMatrix();
+        glm::mat4 mvp = tile->mvp();
 
         for (const auto& style : _styles) {
             const auto& mesh = tile->getMesh(*style);
